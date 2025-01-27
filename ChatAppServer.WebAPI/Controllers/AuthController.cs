@@ -1,5 +1,6 @@
 ﻿using ChatAppServer.WebAPI.Dtos;
 using ChatAppServer.WebAPI.Models;
+using ChatAppServer.WebAPI.Services;
 using GenericFileService.Files;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
@@ -8,45 +9,49 @@ namespace ChatAppServer.WebAPI.Controllers;
 
 [Route("api/[controller]/[action]")]
 [ApiController]
-public sealed class AuthController : ControllerBase
+public class AuthController : ControllerBase
 {
-    private readonly IMongoCollection<User> _users;
-    private readonly IMongoDatabase _mongoDatabase;
+    private readonly IUsersService _usersService;
 
-    public AuthController(DatabaseProviderService databaseProvider)
+    public AuthController(IUsersService usersService)
     {
-        _mongoDatabase = databaseProvider.GetAccess();
-        _users = _mongoDatabase.GetCollection<User>("Users");
+        _usersService = usersService;
     }
 
     [HttpPost]
     public async Task<IActionResult> Register([FromForm] RegisterDto request, CancellationToken cancellationToken)
     {
-        var userExisting = _users.Find(x => x.Name.Equals(request.Name)).FirstOrDefault(cancellationToken);
-
-        if (userExisting != null)
+        try
         {
-            return BadRequest(new { Message = "Name already exists, choose another" });
+            var user = await _usersService.CreateUserAsync(request, cancellationToken);
+            return Ok(user);
         }
-
-        string avatar = FileService.FileSaveToServer(request.File, "wwwroot/avatar/");
-
-        User user = new()
+        catch (InvalidOperationException ex)
         {
-            Name = request.Name,
-            Avatar = avatar
-        };
-        await _users.InsertOneAsync(user);
-        return Ok(user);
+            return BadRequest(new { Message = ex.Message });
+        }
     }
 
     [HttpGet]
     public async Task<IActionResult> Login(string name, CancellationToken cancellationToken)
     {
-        User? user = _users.Find(x => x.Name.Equals(name)).FirstOrDefault();
-        user.Status = "online";
+        var user = _usersService.GetUserByName(name, cancellationToken);
 
+        if (user == null)
+        {
+            return NotFound(new { Message = "User not found." });
+        }
+
+        await _usersService.UpdateUserStatus(user.Id, "online");
         return Ok(user);
     }
+
+    [HttpGet]
+    public async Task<IActionResult> GetUsers(CancellationToken cancellationToken)
+    {
+        var users = await _usersService.GetUsersAsync(cancellationToken);
+        return Ok(users);
+    }
 }
+
 

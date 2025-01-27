@@ -36,7 +36,8 @@ builder.Services.Configure<DatabaseSettings>(
     builder.Configuration.GetSection("MessengerApplicationDatabase"));
 
 builder.Services.AddScoped<DatabaseProviderService>();
-builder.Services.AddScoped<UsersService>();
+builder.Services.AddScoped<IUsersService, UsersService>();
+builder.Services.AddScoped<IMessagesService, MessagesService>();
 
 builder.Services.AddSignalR((e => { e.EnableDetailedErrors = true; }));
 

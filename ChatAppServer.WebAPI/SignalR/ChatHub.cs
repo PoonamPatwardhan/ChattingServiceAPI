@@ -7,10 +7,10 @@ namespace ChatAppServer.WebAPI.SignalR;
 
 public sealed class ChatHub : Hub
 {
-    private readonly UsersService _usersService;
+    private readonly IUsersService _usersService;
     private readonly ConnectionTracker _connectionTracker;
 
-    public ChatHub(UsersService usersService, ConnectionTracker connectionTracker)
+    public ChatHub(IUsersService usersService, ConnectionTracker connectionTracker)
     {
         _usersService = usersService;
         _connectionTracker = connectionTracker;
